@@ -42,36 +42,51 @@ class WhatBot(object):
         self._session.headers['X-CSRF-Token'] = res[u'csrf']
 
         # Login
-        res = self._post("/session", login=self._config.get('Login'), password=self._config.get('Password'))
+        res = self._post("/session", login=self._config.get('WhatBot', 'Username'), password=self._config.get('WhatBot', 'Password'))
         if u'error' in res:
             raise self.WorseThanFailure(res[u'error'].encode('utf8'))
 
         my_uid = res[u'user'][u'id']
 
-        self._bus_registrations["/notification/%d" % my_uid] = -1
-        self._bus_callbacks["/notification/%d" % my_uid] = self._notif_cb
+        self._bus_register("/topic/1000", self._notif_likes_topic)
+        self._bus_register("/topic/3031", self._notif_likes_topic)
+        self._bus_register("/notification/%d" % my_uid, self._notif_ignore) #self._notif_cb
 
         self._session.headers['X-SILENCE-LOGGER'] = "true"
 
-        self._handle_notifications()
+        self._init_liking()
+        #self._handle_notifications()
 
         print "Entering main loop"
-        while True:
-            pprint(self._bus_registrations)
-            data = self._post("/message-bus/%s/poll" % self._client_id,
-                **self._bus_registrations)
-            pprint(data)
+        try:
+            while True:
+                pprint(self._bus_registrations)
+                data = self._post("/message-bus/%s/poll" % self._client_id,
+                    **self._bus_registrations)
+                pprint(data)
 
-            for message in data:
-                channel = message[u'channel']
-                if channel in self._bus_registrations:
-                    message_id = message[u'message_id']
-                    self._bus_registrations[channel] = message_id
-                    self._bus_callbacks[channel](message[u'data'])
-                if channel == u"/__status":
-                    for key, value in message[u'data'].iteritems():
-                        if key in self._bus_registrations:
-                            self._bus_registrations[key] = value
+                for message in data:
+                    channel = message[u'channel']
+                    if channel in self._bus_registrations:
+                        message_id = message[u'message_id']
+                        self._bus_registrations[channel] = message_id
+                        self._bus_callbacks[channel](message[u'data'])
+                    if channel == u"/__status":
+                        for key, value in message[u'data'].iteritems():
+                            if key in self._bus_registrations:
+                                self._bus_registrations[key] = value
+        except requests.exceptions.HTTPError as e:
+            print 'HTTP Error', e
+            print e.args
+            pprint(e.response)
+            pass
+
+    def _bus_register(self, channel, callback):
+        self._bus_registrations[channel] = -1
+        self._bus_callbacks[channel] = callback
+
+    def _notif_ignore(self, message):
+        pass
 
     def _notif_cb(self, message):
         if REPLY_TO_PMS:
@@ -81,6 +96,15 @@ class WhatBot(object):
 
         if count > 0:
             self._handle_notifications()
+
+    def _notif_likes_topic(self, message):
+        type = message[u'type']
+        pprint(type)
+        if type == u'created':
+            self._like_post(message[u'id'])
+        pprint(message)
+        pprint(type == u'created')
+        pprint(type is u'created')
 
     def _handle_notifications(self):
         for mention in self._get_mentions():
@@ -102,6 +126,30 @@ class WhatBot(object):
             self._reply_to(mention.topic_id, mention.post_number, message)
             sleep(5)
 
+    def _init_liking(self):
+        topic_data = self._get("/t/1000/last.json")
+        for post in topic_data[u'post_stream'][u'posts']:
+            actions = post[u'actions_summary']
+            like_action = self._find_like_action(actions)
+            if not u'acted' in like_action:
+                self._like_post(post[u'id'])
+            else:
+                pprint("Skipping liked post %d" % post[u'id'])
+
+    @staticmethod
+    def _find_like_action(actions_summary):
+        for action in actions_summary:
+            if action[u'id'] == 2:
+                return action
+        return None
+
+    def _like_post(self, post_id):
+        sleep(1)
+        pprint("Liking post %d" % post_id)
+        return self._post("/post_actions", id=post_id,
+            post_action_type_id=2,
+            flag_topic=u'false'
+        )
 
     def _reply_to(self, topic_id, post_number, raw_message):
         # No idea what happens if we mix these up
@@ -143,7 +191,7 @@ class WhatBot(object):
                 val = (3 & val) | 8
             return "%x" % val
 
-        return re.sub('[xy]', _replace, "xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx")
+        return re.sub('[xy]', _replace, "xxxxxxxxxxxx5xxxyxxxxxxxxxxxxxxx")
 
     def _get(self, url, **kwargs):
         r = self._session.get(BASE_URL + url, params=kwargs)
