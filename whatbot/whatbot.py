@@ -12,7 +12,6 @@ import ConfigParser
 REPLY_TO_PMS = True # If True, reply to private messages instead of mentions
 
 BASE_URL = "http://what.thedailywtf.com"
-MESSAGE = u"I agree with whatever @%s posted just above."
 
 class WhatBot(object):
     """
@@ -48,14 +47,19 @@ class WhatBot(object):
 
         my_uid = res[u'user'][u'id']
 
-        self._bus_register("/topic/1000", self._notif_likes_topic)
-        self._bus_register("/topic/3031", self._notif_likes_topic)
-        self._bus_register("/notification/%d" % my_uid, self._notif_ignore) #self._notif_cb
+        # Set up bus registrations according to feature flags
+
+        if self._config.getboolean('Features', 'SignatureGuy'):
+            self._bus_register("/notification/%d" % my_uid, self._notif_mentioned)
+            self._handle_notifications()
+
+        if self._config.getboolean('Features', 'AutoLike'):
+            topics = self._config.get('Params', 'LikingTopics')
+            for topic in topics.split():
+                self._bus_register("/topic/%d" % int(topic), self._notif_likes_topic)
+            self._init_liking()
 
         self._session.headers['X-SILENCE-LOGGER'] = "true"
-
-        self._init_liking()
-        #self._handle_notifications()
 
         print "Entering main loop"
         try:
@@ -88,7 +92,7 @@ class WhatBot(object):
     def _notif_ignore(self, message):
         pass
 
-    def _notif_cb(self, message):
+    def _notif_mentioned(self, message):
         if REPLY_TO_PMS:
             count = message[u'unread_private_messages']
         else:
@@ -99,12 +103,9 @@ class WhatBot(object):
 
     def _notif_likes_topic(self, message):
         type = message[u'type']
-        pprint(type)
         if type == u'created':
             self._like_post(message[u'id'])
         pprint(message)
-        pprint(type == u'created')
-        pprint(type is u'created')
 
     def _handle_notifications(self):
         for mention in self._get_mentions():
@@ -119,7 +120,7 @@ class WhatBot(object):
             sleep(.5)
 
             print u"Sending reply…"
-            message = MESSAGE % mention.username + (u"&nbsp;" *
+            message = self._config.get('Params', 'Message') % mention.username + (u"&nbsp;" *
                 self._nbsp_count)
             self._nbsp_count = (self._nbsp_count + 1) % 50
 

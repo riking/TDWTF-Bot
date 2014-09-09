@@ -1,3 +1,12 @@
 [WhatBot]
 Username=
 Password=
+
+[Features]
+SignatureGuy=off
+AutoLike=on
+
+[Params]
+ForumUrl=http://what.thedailywtf.com
+LikingTopics=1000 3031
+Message=I agree with whatever @%s posted just above.
