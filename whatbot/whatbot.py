@@ -7,6 +7,7 @@ from time import time, sleep
 import requests
 import random
 import re
+import ConfigParser
 
 REPLY_TO_PMS = True # If True, reply to private messages instead of mentions
 
@@ -31,13 +32,17 @@ class WhatBot(object):
         self._bus_callbacks = {}
         self._nbsp_count = random.randrange(0, 50)
 
+        config = ConfigParser.ConfigParser()
+        config.read(['whatbot.conf'])
+        self._config = config
+
     def run(self):
         # Get the CSRF token
         res = self._get("/session/csrf", _=int(time() * 1000))
         self._session.headers['X-CSRF-Token'] = res[u'csrf']
 
         # Login
-        res = self._post("/session", login=LOGIN, password=PASSWORD)
+        res = self._post("/session", login=self._config.get('Login'), password=self._config.get('Password'))
         if u'error' in res:
             raise self.WorseThanFailure(res[u'error'].encode('utf8'))
 
