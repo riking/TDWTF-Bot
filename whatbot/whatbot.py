@@ -150,12 +150,13 @@ class WhatBot(object):
         return None
 
     def _like_post(self, post_id):
-        sleep(.2)
-        pprint("Liking post %d" % post_id)
-        return self._post("/post_actions", id=post_id,
+        print("Liking post %d" % post_id)
+        ret = self._post("/post_actions", id=post_id,
             post_action_type_id=2,
             flag_topic=u'false'
         )
+        sleep(.2)
+        return ret
 
     def _reply_to(self, topic_id, post_number, raw_message):
         # No idea what happens if we mix these up
