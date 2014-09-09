@@ -85,6 +85,7 @@ class WhatBot(object):
                             if key in self._bus_registrations:
                                 self._bus_registrations[key] = value
 
+                print "Performing polling.."
                 for callback in self._polling_functions:
                     callback()
         except requests.exceptions.HTTPError as e:
