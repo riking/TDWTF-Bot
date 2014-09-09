@@ -106,7 +106,7 @@ class WhatBot(object):
 
     def _notif_likes_topic(self, message):
         type = message[u'type']
-        print("Update: %s post id %d in %s" % (message[u'type'], message[u'id'], message[u'channel']))
+        print("Update: %s post id %d" % (message[u'type'], message[u'id']))
         if type == u'created':
             self._like_post(message[u'id'])
 
