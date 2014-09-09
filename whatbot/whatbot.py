@@ -56,8 +56,9 @@ class WhatBot(object):
         if self._config.getboolean('Features', 'AutoLike'):
             topics = self._config.get('Params', 'LikingTopics')
             for topic in topics.split():
-                self._bus_register("/topic/%d" % int(topic), self._notif_likes_topic)
-            self._init_liking()
+                topic_id = int(topic)
+                self._bus_register("/topic/%d" % topic_id, self._notif_likes_topic)
+                self._init_liking(topic_id)
 
         self._session.headers['X-SILENCE-LOGGER'] = "true"
 
@@ -84,6 +85,8 @@ class WhatBot(object):
             print e.args
             pprint(e.response)
             pass
+        except KeyboardInterrupt:
+            print '\nQuitting.'
 
     def _bus_register(self, channel, callback):
         self._bus_registrations[channel] = -1
@@ -127,8 +130,8 @@ class WhatBot(object):
             self._reply_to(mention.topic_id, mention.post_number, message)
             sleep(5)
 
-    def _init_liking(self):
-        topic_data = self._get("/t/1000/last.json")
+    def _init_liking(self, topic):
+        topic_data = self._get("/t/%d/last.json" % topic)
         for post in topic_data[u'post_stream'][u'posts']:
             actions = post[u'actions_summary']
             like_action = self._find_like_action(actions)
