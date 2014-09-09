@@ -29,6 +29,7 @@ class WhatBot(object):
         self._client_id = self._get_client_id()
         self._bus_registrations = {}
         self._bus_callbacks = {}
+        self._polling_functions = []
         self._nbsp_count = random.randrange(0, 50)
 
         config = ConfigParser.ConfigParser()
@@ -59,6 +60,7 @@ class WhatBot(object):
                 topic_id = int(topic)
                 self._bus_register("/topic/%d" % topic_id, self._notif_likes_topic)
                 self._init_liking(topic_id)
+            self._polling_register(self._poll_user_posts)
 
         self._session.headers['X-SILENCE-LOGGER'] = "true"
 
@@ -82,6 +84,9 @@ class WhatBot(object):
                         for key, value in message[u'data'].iteritems():
                             if key in self._bus_registrations:
                                 self._bus_registrations[key] = value
+
+                for callback in self._polling_functions:
+                    callback()
         except requests.exceptions.HTTPError as e:
             print 'HTTP Error', e
             print e.args
@@ -90,9 +95,14 @@ class WhatBot(object):
         except KeyboardInterrupt:
             print '\nQuitting.'
 
+
     def _bus_register(self, channel, callback):
         self._bus_registrations[channel] = -1
         self._bus_callbacks[channel] = callback
+
+    def _polling_register(self, callback):
+        self._polling_functions.append(callback)
+
 
     def _notif_ignore(self, message):
         pass
@@ -111,6 +121,30 @@ class WhatBot(object):
         print("Update: %s post id %d" % (message[u'type'], message[u'id']))
         if type == u'created':
             self._like_post(message[u'id'])
+
+    def _poll_user_posts(self):
+        users = self._config.get('Params', 'LikingUsers')
+        for user in users.split():
+            # user_actions.json
+            # offset=0&username=loopback0&filter=5&_=1410298897017
+            result = self._get("/user_actions.json",
+                      offset=0,
+                      username=user,
+                      filter=5
+            )
+            post_ids = []
+            for action in result[u'user_actions']:
+                post_ids.append(int(action[u'post_id']))
+            break_count = 0
+            for post_id in post_ids[0:10]:
+                result = self._get("/posts/%d.json" % post_id)
+                like_action = self._find_like_action(result[u'actions_summary'])
+                if not u'acted' in like_action:
+                    self._like_post(post_id)
+                else:
+                    break_count += 1
+                    if break_count > 3:
+                        break
 
     def _handle_notifications(self):
         for mention in self._get_mentions():
