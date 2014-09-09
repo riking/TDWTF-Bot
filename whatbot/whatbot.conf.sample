@@ -1,6 +1,7 @@
 [WhatBot]
 Username=
 Password=
+MessageBusDebug=off
 
 [Features]
 SignatureGuy=off

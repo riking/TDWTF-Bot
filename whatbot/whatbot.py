@@ -68,7 +68,9 @@ class WhatBot(object):
                 pprint(self._bus_registrations)
                 data = self._post("/message-bus/%s/poll" % self._client_id,
                     **self._bus_registrations)
-                pprint(data)
+
+                if self._config.getboolean('WhatBot', 'MessageBusDebug'):
+                    pprint(data)
 
                 for message in data:
                     channel = message[u'channel']
