@@ -106,9 +106,9 @@ class WhatBot(object):
 
     def _notif_likes_topic(self, message):
         type = message[u'type']
+        print("Update: %s post id %d in %s" % (message[u'type'], message[u'id'], message[u'channel']))
         if type == u'created':
             self._like_post(message[u'id'])
-        pprint(message)
 
     def _handle_notifications(self):
         for mention in self._get_mentions():
@@ -148,7 +148,7 @@ class WhatBot(object):
         return None
 
     def _like_post(self, post_id):
-        sleep(1)
+        sleep(.2)
         pprint("Liking post %d" % post_id)
         return self._post("/post_actions", id=post_id,
             post_action_type_id=2,
