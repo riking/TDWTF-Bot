@@ -181,12 +181,8 @@ class WhatBot(object):
         print u"Replying to %s in topic %d, post %d" % (mention.username,
             mention.topic_id, mention.post_number)
 
-        sleep(.5)
-
         print u"Marking as read…"
         self._mark_as_read(mention.topic_id, mention.post_number)
-
-        sleep(.5)
 
         print u"Sending reply…"
         message = self._config.get('Params', 'Message') % mention.username + (u"&nbsp;" *
@@ -194,7 +190,6 @@ class WhatBot(object):
         self._nbsp_count = (self._nbsp_count + 1) % 50
 
         self._reply_to(mention.topic_id, mention.post_number, message)
-        sleep(5)
 
     def _handle_mention_transfer(self, mention):
         print u"Reposessing from %s in in topic %d, post %d" % (mention.username,
@@ -238,6 +233,8 @@ class WhatBot(object):
     def _reply_to(self, topic_id, post_number, raw_message):
         # No idea what happens if we mix these up
         archetype = 'private_message' if REPLY_TO_PMS else 'regular'
+
+        sleep(5)
 
         return self._post("/posts", raw=raw_message, topic_id=topic_id,
             reply_to_post_number=post_number,
