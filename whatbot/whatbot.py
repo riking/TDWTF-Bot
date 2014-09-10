@@ -8,6 +8,7 @@ import requests
 import random
 import re
 import ConfigParser
+import sys
 
 REPLY_TO_PMS = True # If True, reply to private messages instead of mentions
 
@@ -30,7 +31,9 @@ class WhatBot(object):
         self._bus_registrations = {}
         self._bus_callbacks = {}
         self._polling_functions = []
+
         self._nbsp_count = random.randrange(0, 50)
+        self._autolike_poll_history = {}
 
         config = ConfigParser.ConfigParser()
         config.read(['whatbot.conf'])
@@ -87,7 +90,7 @@ class WhatBot(object):
                                 self._bus_registrations[key] = value
 
                 if last_poll + self._config.getint('Params', 'PollingIntervalSecs') < time():
-                    print "Performing polling.."
+                    print "Performing polling"
                     for callback in self._polling_functions:
                         callback()
                     last_poll = time()
@@ -130,17 +133,26 @@ class WhatBot(object):
     def _poll_user_posts(self):
         users = self._config.get('Params', 'LikingUsers')
         for user in users.split():
-            print("Polling %s for new posts" % user)
-            # user_actions.json
-            # offset=0&username=loopback0&filter=5&_=1410298897017
             result = self._get("/user_actions.json",
                       offset=0,
                       username=user,
                       filter=5
             )
+
+            # check if nothing changed
+            if (user in self._autolike_poll_history
+                    and result[u'user_actions'][0][u'post_id'] == self._autolike_poll_history[user]):
+                print("Polling %s for new posts... no change." % user)
+                continue
+
+            # lol output hax
+            print("Polling %s for new posts..." % user)
+
+            # collect post IDs
             post_ids = []
             for action in result[u'user_actions']:
                 post_ids.append(int(action[u'post_id']))
+
             break_count = 0
             for post_id in post_ids[0:10]:
                 result = self._get("/posts/%d.json" % post_id)
@@ -150,7 +162,8 @@ class WhatBot(object):
                 else:
                     break_count += 1
                     if break_count >= 3:
-                        print("Stopped checking %s at post %d" % (user, post_id))
+                        print("Stopped %s new posts check at post %d" % (user, post_id))
+                        self._autolike_poll_history[user] = post_ids[0]
                         break
 
     def _handle_notifications(self):
