@@ -212,10 +212,7 @@ class WhatBot(object):
             actions = post[u'actions_summary']
             like_action = self._find_like_action(actions)
             if not u'acted' in like_action:
-                try:
-                    self._like_post(post[u'id'])
-                except requests.exceptions.HTTPError as e:
-                    pprint(e.response)
+                self._like_post(post[u'id'])
             else:
                 print("Skipping liked post %d" % post[u'id'])
 
@@ -228,12 +225,16 @@ class WhatBot(object):
 
     def _like_post(self, post_id):
         print("Liking post %d" % post_id)
-        ret = self._post("/post_actions", id=post_id,
-            post_action_type_id=2,
-            flag_topic=u'false'
-        )
-        sleep(.2)
-        return ret
+
+        try:
+            ret = self._post("/post_actions", id=post_id,
+                             post_action_type_id=2,
+                             flag_topic=u'false'
+            )
+        except requests.exceptions.HTTPError as e:
+            pprint(e.response)
+
+        return None
 
     def _reply_to(self, topic_id, post_number, raw_message):
         # No idea what happens if we mix these up
