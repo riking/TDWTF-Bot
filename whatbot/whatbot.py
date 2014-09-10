@@ -66,6 +66,7 @@ class WhatBot(object):
 
         print "Entering main loop"
         try:
+            last_poll = -1
             while True:
                 pprint(self._bus_registrations)
                 data = self._post("/message-bus/%s/poll" % self._client_id,
@@ -85,9 +86,12 @@ class WhatBot(object):
                             if key in self._bus_registrations:
                                 self._bus_registrations[key] = value
 
-                print "Performing polling.."
-                for callback in self._polling_functions:
-                    callback()
+                if last_poll + self._config.get('Params', 'PollingIntervalSecs') < time():
+                    print "Performing polling.."
+                    for callback in self._polling_functions:
+                        callback()
+                    last_poll = time()
+
         except requests.exceptions.HTTPError as e:
             print 'HTTP Error', e
             print e.args

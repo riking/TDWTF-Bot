@@ -10,4 +10,6 @@ AutoLike=on
 [Params]
 ForumUrl=http://what.thedailywtf.com
 LikingTopics=1000 3031
+LikingUsers=
 Message=I agree with whatever @%s posted just above.
+PollingIntervalSecs=10
