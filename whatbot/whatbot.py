@@ -130,6 +130,7 @@ class WhatBot(object):
     def _poll_user_posts(self):
         users = self._config.get('Params', 'LikingUsers')
         for user in users.split():
+            print("Polling %s for new posts" % user)
             # user_actions.json
             # offset=0&username=loopback0&filter=5&_=1410298897017
             result = self._get("/user_actions.json",
