@@ -86,7 +86,7 @@ class WhatBot(object):
                             if key in self._bus_registrations:
                                 self._bus_registrations[key] = value
 
-                if last_poll + self._config.get('Params', 'PollingIntervalSecs') < time():
+                if last_poll + self._config.getint('Params', 'PollingIntervalSecs') < time():
                     print "Performing polling.."
                     for callback in self._polling_functions:
                         callback()
