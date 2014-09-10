@@ -211,7 +211,7 @@ class WhatBot(object):
         for post in topic_data[u'post_stream'][u'posts']:
             actions = post[u'actions_summary']
             like_action = self._find_like_action(actions)
-            if not u'acted' in like_action:
+            if (not u'acted' in like_action) and (like_action[u'can_act'] == u'true'):
                 self._like_post(post[u'id'])
             else:
                 print("Skipping liked post %d" % post[u'id'])
