@@ -205,7 +205,9 @@ class WhatBot(object):
 
         result = self._post("/t/%d/change-owner" % mention.topic_id, **params)
 
-        pprint(result)
+        self._mark_as_read(mention.topic_id, mention.post_number)
+        print u"Complete."
+        sleep(1)
 
     def _init_liking(self, topic):
         topic_data = self._get("/t/%d/last.json" % topic)
