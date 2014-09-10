@@ -149,7 +149,8 @@ class WhatBot(object):
                     self._like_post(post_id)
                 else:
                     break_count += 1
-                    if break_count > 3:
+                    if break_count >= 3:
+                        print("Stopped checking %s at post %d" % (user, post_id))
                         break
 
     def _handle_notifications(self):
