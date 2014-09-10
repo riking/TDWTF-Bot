@@ -240,12 +240,12 @@ class WhatBot(object):
         # No idea what happens if we mix these up
         archetype = 'private_message' if REPLY_TO_PMS else 'regular'
 
-        sleep(5)
-
-        return self._post("/posts", raw=raw_message, topic_id=topic_id,
+        ret = self._post("/posts", raw=raw_message, topic_id=topic_id,
             reply_to_post_number=post_number,
             archetype=archetype
         )
+        sleep(5)
+        return ret
 
     def _mark_as_read(self, topic_id, post_number):
         # Send fake timings
