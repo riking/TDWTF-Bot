@@ -281,17 +281,34 @@ class WhatBot(object):
 
     def _get(self, url, **kwargs):
         r = self._session.get(BASE_URL + url, params=kwargs)
+
+        if r.status_code == 503:
+            self._loop_for_upgrade()
+            return self._get(url, **kwargs)
+
         r.raise_for_status()
         return r.json()
 
     def _post(self, url, **kwargs):
         r = self._session.post(BASE_URL + url, data=kwargs)
+
         if r.status_code == 422:
             raise self.WorseThanFailure(u",".join(r.json()[u'errors']))
+        if r.status_code == 503:
+            self._loop_for_upgrade()
+            return self._post(url, **kwargs)
+
         r.raise_for_status()
         if r.headers['Content-type'].startswith('application/json'):
             return r.json()
         return r.content
+
+    def _loop_for_upgrade(self):
+        while True:
+            sleep(5)
+            r = self._session.get(BASE_URL + "/srv/status")
+            if r.status_code < 500:
+                return
 
 if __name__ == '__main__':
     WhatBot().run()
