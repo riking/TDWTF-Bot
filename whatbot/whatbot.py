@@ -191,6 +191,8 @@ class WhatBot(object):
 
         self._reply_to(mention.topic_id, mention.post_number, message)
 
+        sleep(2)
+
     def _handle_mention_transfer(self, mention):
         print u"Reposessing from %s in in topic %d, post %d" % (mention.username,
             mention.topic_id, mention.post_number)
@@ -210,9 +212,12 @@ class WhatBot(object):
             actions = post[u'actions_summary']
             like_action = self._find_like_action(actions)
             if not u'acted' in like_action:
-                self._like_post(post[u'id'])
+                try:
+                    self._like_post(post[u'id'])
+                except requests.exceptions.HTTPError as e:
+                    pprint(e.response)
             else:
-                pprint("Skipping liked post %d" % post[u'id'])
+                print("Skipping liked post %d" % post[u'id'])
 
     @staticmethod
     def _find_like_action(actions_summary):
