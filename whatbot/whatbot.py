@@ -10,7 +10,7 @@ import re
 import ConfigParser
 import sys
 
-REPLY_TO_PMS = True # If True, reply to private messages instead of mentions
+REPLY_TO_PMS = False # If True, reply to private messages instead of mentions
 
 BASE_URL = "http://what.thedailywtf.com"
 
@@ -22,7 +22,7 @@ class WhatBot(object):
     class WorseThanFailure(Exception):
         pass
 
-    Mention = namedtuple('Mention', ['username', 'topic_id', 'post_number'])
+    Mention = namedtuple('Mention', ['username', 'topic_id', 'post_number', 'post_id'])
 
     def __init__(self):
         self._session = requests.Session()
@@ -53,7 +53,10 @@ class WhatBot(object):
 
         # Set up bus registrations according to feature flags
 
-        if self._config.getboolean('Features', 'SignatureGuy'):
+        if (
+            self._config.getboolean('Features', 'SignatureGuy') or
+            self._config.getboolean('Features', 'TransferPost')
+        ):
             self._bus_register("/notification/%d" % my_uid, self._notif_mentioned)
             self._handle_notifications()
 
@@ -168,23 +171,41 @@ class WhatBot(object):
 
     def _handle_notifications(self):
         for mention in self._get_mentions():
-            print u"Replying to %s in topic %d, post %d" % (mention.username,
-                mention.topic_id, mention.post_number)
+            pprint(mention)
+            if self._config.getboolean('Features', 'SignatureGuy'):
+                self._handle_mention_sigguy(mention)
+            if self._config.getboolean('Features', 'TransferPost'):
+                self._handle_mention_transfer(mention)
 
-            sleep(.5)
+    def _handle_mention_sigguy(self, mention):
+        print u"Replying to %s in topic %d, post %d" % (mention.username,
+            mention.topic_id, mention.post_number)
 
-            print u"Marking as read…"
-            self._mark_as_read(mention.topic_id, mention.post_number)
+        sleep(.5)
 
-            sleep(.5)
+        print u"Marking as read…"
+        self._mark_as_read(mention.topic_id, mention.post_number)
 
-            print u"Sending reply…"
-            message = self._config.get('Params', 'Message') % mention.username + (u"&nbsp;" *
-                self._nbsp_count)
-            self._nbsp_count = (self._nbsp_count + 1) % 50
+        sleep(.5)
 
-            self._reply_to(mention.topic_id, mention.post_number, message)
-            sleep(5)
+        print u"Sending reply…"
+        message = self._config.get('Params', 'Message') % mention.username + (u"&nbsp;" *
+            self._nbsp_count)
+        self._nbsp_count = (self._nbsp_count + 1) % 50
+
+        self._reply_to(mention.topic_id, mention.post_number, message)
+        sleep(5)
+
+    def _handle_mention_transfer(self, mention):
+        print u"Reposessing from %s in in topic %d, post %d" % (mention.username,
+            mention.topic_id, mention.post_number)
+
+        params = {'username': self._config.get('Params', 'TransferPostTarget'),
+                  'post_ids[]': mention.post_id}
+
+        result = self._post("/t/%d/change-owner" % mention.topic_id, **params)
+
+        pprint(result)
 
     def _init_liking(self, topic):
         topic_data = self._get("/t/%d/last.json" % topic)
@@ -240,9 +261,11 @@ class WhatBot(object):
             if (notification[u'notification_type'] == watched_type and
                 notification[u'read'] == False):
                 data = notification[u'data']
-                yield self.Mention(username=data[u'original_username'],
+                yield self.Mention(
+                    username=data[u'original_username'],
                     topic_id=notification[u'topic_id'],
-                    post_number=notification[u'post_number'])
+                    post_number=notification[u'post_number'],
+                    post_id=data[u'original_post_id'])
 
     @staticmethod
     def _get_client_id():

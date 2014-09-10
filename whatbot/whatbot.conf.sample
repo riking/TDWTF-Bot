@@ -6,9 +6,11 @@ MessageBusDebug=off
 [Features]
 SignatureGuy=off
 AutoLike=on
+TransferPost=off
 
 [Params]
 ForumUrl=http://what.thedailywtf.com
+TransferPostTarget=AnonymousTDWTFer
 LikingTopics=1000 3031
 LikingUsers=
 Message=I agree with whatever @%s posted just above.
